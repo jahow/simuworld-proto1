@@ -1,0 +1,21 @@
+{
+  "name": "simuworld-proto1",
+  "description": "a simple prototype",
+  "main": "",
+  "authors": [
+    "gangreforge team"
+  ],
+  "license": "MIT",
+  "moduleType": [],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ],
+  "dependencies": {
+    "pepjs": "^0.4.1",
+    "babylonjs": "^2.2.0"
+  }
+}
