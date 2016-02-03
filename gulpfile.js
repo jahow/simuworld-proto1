@@ -108,9 +108,8 @@ gulp.task('css', function () {
 	return stream;	// hint end of task
 });
 
-
-// entry point
-gulp.task('default', ['css', 'js_ext', 'js'], function () {
+// dev tasks
+gulp.task('dev', ['css', 'js_ext', 'js'], function () {
 
 	// launch browser-sync & watch public files for change
 	browsersync({
@@ -127,6 +126,18 @@ gulp.task('default', ['css', 'js_ext', 'js'], function () {
 	// add a watch for js linting & minifying
 	gulp.watch(['./ts/*.ts'], ['js']);
 
+});
+
+// entry point
+gulp.task('default', function () {
+
+	// launch browser-sync, no watch
+	browsersync({
+        port: 8000,
+        server: {
+        	baseDir: './public'
+        }
+	});
 });
 
 

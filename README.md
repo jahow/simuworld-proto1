@@ -10,6 +10,10 @@ You will need npm and bower installed for this to work.
 
 # Compiling and launching
 
-To compile typescript code and concatenate public files, just type `gulp`.
+To compile typescript code and concatenate public files, type `gulp dev`. The opened browser window will be synchronized, i.e. any change to the source code will trigger a reload of the page.
 
-This will launch a local server at port 8080 and open a synchronized browser window.
+If you only need to launch the app, simply type `gulp`. This will launch a local server at port 8080 and open a browser window.
+
+# Usage
+
+Type `scene.debugLayer.show()` in the console to have access to additional info about the rendered scene.
