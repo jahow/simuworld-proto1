@@ -27,7 +27,7 @@ var ts = require('gulp-typescript');
 
 // prepare external sources (this is only done on launch)
 gulp.task('js_ext', function () {
-	gulp.src([
+	var stream = gulp.src([
     	'./bower_components/babylonjs/dist/babylon.2.2.js',
     	'./bower_components/pepjs/dist/pep.min.js'
 	])
@@ -35,36 +35,44 @@ gulp.task('js_ext', function () {
 	//.pipe(uglify())
 	.pipe(gulp.dest('./public/'))
 	.on('error', errorHandler);
+
+	return stream;	// hint end of task
 });
 
 // linting
 // this task is ran at launch (on all files) and on changed files
 gulp.task('lint', function () {
-	gulp.src(['./js/*.js'])
+	var stream = gulp.src(['./js/*.js'])
 	.pipe(cache('linting'))
 	.pipe(jshint())
 	.pipe(jshint.reporter('jshint-stylish'))
 	.on('error', errorHandler);
+
+	return stream;	// hint end of task
 });
 
 // compile typescript files
 gulp.task('ts', function () {
-	gulp.src(['./ts/*.ts',])
+	var stream = gulp.src(['./ts/*.ts',])
 	.pipe(ts({
 		noImplicitAny: false,
 		out: 'ts_output.js'
 	}))
 	.pipe(gulp.dest('./js/'))
 	.on('error', errorHandler);
+
+	return stream;	// hint end of task
 });
 
 // concat and minify js sources to public
 gulp.task('js', ['ts', 'lint'], function () {
-	gulp.src(['./js/*.js'])
+	var stream = gulp.src(['./js/*.js'])
 	.pipe(concat('app.min.js'))
 	//.pipe(uglify())
 	.pipe(gulp.dest('./public/'))
 	.on('error', errorHandler);
+
+	return stream;	// hint end of task
 });
 
 // compile sass to css
@@ -76,12 +84,14 @@ gulp.task('js', ['ts', 'lint'], function () {
 
 // concat css to public
 gulp.task('css', function () {
-	gulp.src([
+	var stream = gulp.src([
     	'./css/*.css'
 	])
 	.pipe(concat('style.min.css'))
 	.pipe(gulp.dest('./public/'))
 	.on('error', errorHandler);
+
+	return stream;	// hint end of task
 });
 
 

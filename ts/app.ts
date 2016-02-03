@@ -31,11 +31,24 @@ function initGLScene() {
 
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
+    var light = new BABYLON.HemisphericLight("light0", new BABYLON.Vector3(0.25, 1, 0), scene);
+    light.diffuse = new BABYLON.Color3(1, 1, 1);
+    light.groundColor = new BABYLON.Color3(0.12, 0.12, 0);
+    light.specular = new BABYLON.Color3(0, 0, 0);
+
     // add input events
     document.addEventListener("pointerdown", onPointerDown, false);
     document.addEventListener("pointermove", onPointerMove, false);
     document.addEventListener("pointerup", onPointerUp, false);
     document.addEventListener("pointerout", onPointerUp, false);
+
+    // temp
+    var generator = new TerrainGenerator();
+    for (var i = -6; i < 6; i++) {
+        for (var j = -4; j < 4; j++) {
+            new TerrainChunk(i * TerrainChunk.WIDTH, j * TerrainChunk.WIDTH, generator);
+        }
+    }
 
     // start loop
     BABYLON.Tools.QueueNewFrame(renderLoop);
