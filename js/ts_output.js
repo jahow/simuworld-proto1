@@ -32,7 +32,7 @@ var TerrainGenerator = (function () {
         // under altitude, return dirt and rock
         // else, return empty
         var altitude = 1.0 + 0.9 * noise.perlin2(x * 0.2, z * 0.2);
-        var altitude2 = 1.0 + 0.5 * noise.perlin2(x * 0.2 + 100, z * 0.2 + 100);
+        var altitude2 = 0.8 + 0.8 * noise.perlin2(x * 0.1 + 100, z * 0.1 + 100);
         if (y > altitude) {
             return SolidVoxel.TYPE_EMPTY;
         }
@@ -84,7 +84,7 @@ function initGLScene() {
     document.addEventListener("pointerout", onPointerUp, false);
     // temp
     var generator = new TerrainGenerator();
-    for (var i = -6; i < 6; i++) {
+    for (var i = -4; i < 4; i++) {
         for (var j = -4; j < 4; j++) {
             new TerrainChunk(i * TerrainChunk.WIDTH, j * TerrainChunk.WIDTH, generator);
         }
@@ -179,7 +179,51 @@ function setMeshColor(mesh, value) {
     }
     mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colors);
 }
+var Timer = (function () {
+    function Timer() {
+        this._start_time = -1;
+        this._recorded_durations = {}; // key is label, value is an array of int (msec)
+        this._recorded_amount = {}; // key is label, value is an int (count)
+        this._recorded_total = {}; // key is label, value is an int (msec)
+    }
+    Timer._getInstance = function () {
+        if (!Timer._inst) {
+            Timer._inst = new Timer();
+        }
+        return Timer._inst;
+    };
+    Timer.start = function () {
+        var timer = Timer._getInstance();
+        timer._start_time = new Date().getTime();
+    };
+    Timer.end = function (label) {
+        var timer = Timer._getInstance();
+        var delta = new Date().getTime() - timer._start_time;
+        //delta *= 0.001;
+        // init
+        if (!timer._recorded_durations[label]) {
+            timer._recorded_durations[label] = [];
+            timer._recorded_amount[label] = 0;
+            timer._recorded_total[label] = 0;
+        }
+        // save data
+        timer._recorded_durations[label].push(delta);
+        timer._recorded_amount[label]++;
+        timer._recorded_total[label] += delta;
+    };
+    // returns a float (msec)
+    Timer.getAverage = function (label) {
+        var timer = Timer._getInstance();
+        if (!timer._recorded_durations[label]) {
+            console.error("Timer: no time saved under label '" + label + "'");
+            return 0;
+        }
+        return timer._recorded_total[label] / timer._recorded_amount[label];
+    };
+    return Timer;
+})();
 /// <reference path="app.ts"/>
+/// <reference path="es6-promise.d.ts"/>
 // Chunks are small pieces of land
 // they consist of one mesh and thus are drawn by a single call
 // they hold raw voxel data and maintain a mesh built according to those data
@@ -215,18 +259,39 @@ var TerrainChunk = (function () {
             }
         }
         // build chunk meshes for the first time
-        this.rebuildChunkMesh();
+        this.askChunkMeshRebuild();
     }
-    // this rebuilds the visible mesh
-    TerrainChunk.prototype.rebuildChunkMesh = function () {
-        // temp
-        /*
-        var mesh = BABYLON.Mesh.CreateBox("chunk", TerrainChunk.WIDTH, scene, TerrainChunk.common_root);
-        mesh.position.x = TerrainChunk.WIDTH / 2;
-        mesh.position.z = TerrainChunk.WIDTH / 2;
-        mesh.position.y = TerrainChunk.WIDTH / 2;
-        mesh.bakeCurrentTransformIntoVertices();
-        */
+    // launches the rebuild task asynchronously
+    TerrainChunk.prototype.askChunkMeshRebuild = function () {
+        var me = this;
+        // setTimeout(function() {
+        // 	me._rebuildChunkMeshAsync();
+        // }, 0);
+        if (!chunkRebuildPromise) {
+            // initialize the promise
+            chunkRebuildPromise = this._rebuildChunkMeshPromise();
+        }
+        else {
+            // queue the rebuild operation
+            chunkRebuildPromise.then(function () {
+                me._rebuildChunkMeshPromise();
+            });
+        }
+    };
+    // this rebuilds the visible mesh; returns a promise
+    TerrainChunk.prototype._rebuildChunkMeshPromise = function () {
+        var me = this;
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                me._rebuildChunkMesh();
+                resolve();
+            }, 0);
+        });
+    };
+    // does the actual chunk rebuilding; must be wrapped in a promise
+    TerrainChunk.prototype._rebuildChunkMesh = function () {
+        //console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z);
+        Timer.start();
         // clear existing mesh
         if (this.visible_mesh) {
             this.visible_mesh.dispose();
@@ -268,6 +333,8 @@ var TerrainChunk = (function () {
         this.visible_mesh = mesh;
         this.visible_mesh.position.x = this.tfor_x;
         this.visible_mesh.position.z = this.tfor_z;
+        //console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z+" -- END");
+        Timer.end('chunk_rebuild');
     };
     // this rebuilds the navigation mesh
     TerrainChunk.prototype.rebuildNavigationMesh = function () {
@@ -279,3 +346,6 @@ var TerrainChunk = (function () {
     TerrainChunk.SUBDIVISIONS = 4; // used for walkable mesh
     return TerrainChunk;
 })();
+// this object handles the queueing of chunk rebuilds
+//var chunkRebuildManager = { };
+var chunkRebuildPromise;

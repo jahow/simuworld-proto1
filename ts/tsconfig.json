@@ -2,6 +2,8 @@
     "compilerOptions": {
 		"noImplicitAny": false,
 		"out": "ts_output.js",
-		"noExternalResolve": false
+		"noExternalResolve": false,
+        "module": "commonjs",
+        "target": "es5"
     }
 }

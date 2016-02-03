@@ -30,7 +30,8 @@ var tsProject = ts.createProject('./ts/tsconfig.json');
 gulp.task('js_ext', function () {
 	var stream = gulp.src([
     	'./bower_components/babylonjs/dist/babylon.2.2.js',
-    	'./bower_components/pepjs/dist/pep.min.js'
+    	'./bower_components/pepjs/dist/pep.min.js',
+    	'./bower_components/async/dist/async.min.js'
 	])
     .pipe(cache('js_ext'))
 	.pipe(concat('inc.min.js'))

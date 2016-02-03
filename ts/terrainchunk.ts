@@ -1,4 +1,5 @@
 /// <reference path="app.ts"/>
+/// <reference path="es6-promise.d.ts"/>
 
 // Chunks are small pieces of land
 // they consist of one mesh and thus are drawn by a single call
@@ -47,7 +48,7 @@ class TerrainChunk {
 		}
 
 		// build chunk meshes for the first time
-		this.rebuildChunkMesh();
+		this.askChunkMeshRebuild();
 	}
 
 	static common_root;
@@ -66,17 +67,42 @@ class TerrainChunk {
 	// used for entity navigation (invisible)
 	navigation_mesh: BABYLON.Mesh;
 
-	// this rebuilds the visible mesh
-	rebuildChunkMesh() {
+	// launches the rebuild task asynchronously
+	askChunkMeshRebuild() {
+		var me = this;
+		// setTimeout(function() {
+		// 	me._rebuildChunkMeshAsync();
+		// }, 0);
 
-		// temp
-		/*
-		var mesh = BABYLON.Mesh.CreateBox("chunk", TerrainChunk.WIDTH, scene, TerrainChunk.common_root);
-		mesh.position.x = TerrainChunk.WIDTH / 2;
-		mesh.position.z = TerrainChunk.WIDTH / 2;
-		mesh.position.y = TerrainChunk.WIDTH / 2;
-		mesh.bakeCurrentTransformIntoVertices();
-		*/
+		if(!chunkRebuildPromise) {
+			// initialize the promise
+			chunkRebuildPromise = this._rebuildChunkMeshPromise();
+		} else {
+			// queue the rebuild operation
+			chunkRebuildPromise.then(function () {
+				me._rebuildChunkMeshPromise();
+			});
+		}
+	}
+
+	// this rebuilds the visible mesh; returns a promise
+	private _rebuildChunkMeshPromise(): Promise<void> {
+		var me = this;
+
+		return new Promise<void>(function (resolve, reject) {
+			setTimeout(function () {
+				me._rebuildChunkMesh();
+				resolve();
+			}, 0);
+		});
+
+	}
+
+	// does the actual chunk rebuilding; must be wrapped in a promise
+	private _rebuildChunkMesh() {
+
+		//console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z);
+		Timer.start();
 
 		// clear existing mesh
 		if(this.visible_mesh) { this.visible_mesh.dispose(); }
@@ -87,7 +113,6 @@ class TerrainChunk {
 		var base_y, current_y;
 
 		// mesh building is done in columns
-
 
 		for(var x = 0; x < this.chunk_data.length; x++) {
 			for(var z = 0; z < this.chunk_data[x].length; z++) {
@@ -123,18 +148,6 @@ class TerrainChunk {
 
 				}
 
-				/*
-				for(var y = 0; y < this.chunk_data[x][z].length; y++) {
-					if (this.chunk_data[x][z][y] == SolidVoxel.TYPE_EMPTY) { continue; }
-
-					voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
-					voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
-					voxel_mesh.position.y = SolidVoxel.SIZE * (y + 0.5);
-					voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
-					voxel_mesh.bakeCurrentTransformIntoVertices();
-					meshes.push(voxel_mesh);
-				}
-				*/
 			}
 		}
 
@@ -144,6 +157,10 @@ class TerrainChunk {
 		this.visible_mesh = mesh;
 		this.visible_mesh.position.x = this.tfor_x;
 		this.visible_mesh.position.z = this.tfor_z;
+
+		//console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z+" -- END");
+		Timer.end('chunk_rebuild');
+
 	}
 
 	// this rebuilds the navigation mesh
@@ -154,3 +171,9 @@ class TerrainChunk {
 	}
 
 }
+
+
+// this object handles the queueing of chunk rebuilds
+//var chunkRebuildManager = { };
+
+var chunkRebuildPromise: Promise<void>;

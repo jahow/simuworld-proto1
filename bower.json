@@ -16,6 +16,7 @@
   ],
   "dependencies": {
     "pepjs": "^0.4.1",
-    "babylonjs": "^2.2.0"
+    "babylonjs": "^2.2.0",
+    "async": "^1.5.2"
   }
 }

@@ -20,7 +20,7 @@ class TerrainGenerator {
 		// else, return empty
 
 		var altitude = 1.0 + 0.9 * noise.perlin2(x * 0.2, z * 0.2);
-		var altitude2 = 1.0 + 0.5 * noise.perlin2(x * 0.2 + 100, z * 0.2 + 100);
+		var altitude2 = 0.8 + 0.8 * noise.perlin2(x * 0.1 + 100, z * 0.1 + 100);
 
 		if (y > altitude) { return SolidVoxel.TYPE_EMPTY; }
 		else {
