@@ -1,4 +1,7 @@
 {
     "compilerOptions": {
-    },
+		"noImplicitAny": false,
+		"out": "ts_output.js",
+		"noExternalResolve": false
+    }
 }

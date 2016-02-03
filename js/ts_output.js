@@ -1,4 +1,54 @@
+var SolidVoxel = (function () {
+    function SolidVoxel() {
+    }
+    // const
+    SolidVoxel.SIZE = 0.25; // 4 voxels make up one meter
+    // types
+    SolidVoxel.TYPE_EMPTY = {
+        empty: true
+    };
+    SolidVoxel.TYPE_DIRT = {
+        color: new BABYLON.Color3(0.9, 0.9, 0.4)
+    };
+    SolidVoxel.TYPE_ROCK = {
+        color: new BABYLON.Color3(0.4, 0.35, 0.15)
+    };
+    SolidVoxel.TYPE_GRASS = {
+        color: new BABYLON.Color3(0.2, 0.95, 0.3)
+    };
+    return SolidVoxel;
+})();
+/// <reference path="noise.d.ts"/>
+/// <reference path="solidvoxel.ts"/>
+// Terrain generators are objects that answer the question:
+// "what voxel is there at coordinates x,y,z?"
+// They just give the 'natural' state of the world, ie before modifications
+var TerrainGenerator = (function () {
+    function TerrainGenerator() {
+    }
+    // returns a SolidVoxel.TYPE_* constant
+    // coordinates are in the Terrain Frame of Reference (TFOR)
+    TerrainGenerator.prototype.getSolidVoxelType = function (x, y, z) {
+        // under altitude, return dirt and rock
+        // else, return empty
+        var altitude = 1.0 + 0.9 * noise.perlin2(x * 0.2, z * 0.2);
+        var altitude2 = 1.0 + 0.5 * noise.perlin2(x * 0.2 + 100, z * 0.2 + 100);
+        if (y > altitude) {
+            return SolidVoxel.TYPE_EMPTY;
+        }
+        else {
+            if (y < altitude2) {
+                return SolidVoxel.TYPE_ROCK;
+            }
+            else {
+                return SolidVoxel.TYPE_DIRT;
+            }
+        }
+    };
+    return TerrainGenerator;
+})();
 /// <reference path="../bower_components/babylonjs/dist/babylon.2.2.d.ts"/>
+/// <reference path="terraingenerator.ts"/>
 var canvas;
 var engine;
 var scene;
@@ -117,18 +167,19 @@ var EasingFunctions = {
     // acceleration until halfway, then deceleration 
     easeInOutQuint: function (t) { return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t; }
 };
-var SolidVoxel = (function () {
-    function SolidVoxel() {
+function setMeshColor(mesh, value) {
+    var colors = [];
+    var count = mesh.getTotalVertices() * 4;
+    var i;
+    for (i = 0; i < count; i += 4) {
+        colors[i] = value.r;
+        colors[i + 1] = value.g;
+        colors[i + 2] = value.b;
+        colors[i + 3] = 1;
     }
-    // const
-    SolidVoxel.SIZE = 0.25; // 4 voxels make up one meter
-    // types
-    SolidVoxel.TYPE_EMPTY = 0;
-    SolidVoxel.TYPE_DIRT = 1;
-    SolidVoxel.TYPE_ROCK = 2;
-    SolidVoxel.TYPE_GRASS = 3;
-    return SolidVoxel;
-})();
+    mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colors);
+}
+/// <reference path="app.ts"/>
 // Chunks are small pieces of land
 // they consist of one mesh and thus are drawn by a single call
 // they hold raw voxel data and maintain a mesh built according to those data
@@ -176,20 +227,39 @@ var TerrainChunk = (function () {
         mesh.position.y = TerrainChunk.WIDTH / 2;
         mesh.bakeCurrentTransformIntoVertices();
         */
+        // clear existing mesh
+        if (this.visible_mesh) {
+            this.visible_mesh.dispose();
+        }
         var meshes = []; // list of meshes to merge
         var voxel_mesh;
+        var base_type, current_type;
+        var base_y, current_y;
+        // mesh building is done in columns
         for (var x = 0; x < this.chunk_data.length; x++) {
             for (var z = 0; z < this.chunk_data[x].length; z++) {
-                for (var y = 0; y < this.chunk_data[x][z].length; y++) {
-                    if (this.chunk_data[x][z][y] == SolidVoxel.TYPE_EMPTY) {
-                        continue;
+                // starting at y=0, check for how long the voxel type is similar
+                base_y = 0;
+                base_type = this.chunk_data[x][z][base_y];
+                for (current_y = 0; current_y < this.chunk_data[x][z].length; current_y++) {
+                    current_type = this.chunk_data[x][z][current_y];
+                    // voxels are different (or we reached the top of the chunk): generate a mesh
+                    if (current_type != base_type || current_y == this.chunk_data[x][z].length - 1) {
+                        // only generate mesh if it's not empty
+                        if (base_type != SolidVoxel.TYPE_EMPTY) {
+                            voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
+                            voxel_mesh.scaling.y = current_y - base_y;
+                            voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
+                            voxel_mesh.position.y = SolidVoxel.SIZE * (base_y + (current_y - base_y) * 0.5);
+                            voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
+                            voxel_mesh.bakeCurrentTransformIntoVertices();
+                            setMeshColor(voxel_mesh, base_type.color);
+                            meshes.push(voxel_mesh);
+                        }
+                        // save new base type
+                        base_type = current_type;
+                        base_y = current_y;
                     }
-                    voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
-                    voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
-                    voxel_mesh.position.y = SolidVoxel.SIZE * (y + 0.5);
-                    voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
-                    voxel_mesh.bakeCurrentTransformIntoVertices();
-                    meshes.push(voxel_mesh);
                 }
             }
         }
@@ -204,35 +274,8 @@ var TerrainChunk = (function () {
         // todo
     };
     // constants
-    TerrainChunk.WIDTH = 2; // in meters
-    TerrainChunk.HEIGHT = 8;
+    TerrainChunk.WIDTH = 4; // in meters
+    TerrainChunk.HEIGHT = 16;
     TerrainChunk.SUBDIVISIONS = 4; // used for walkable mesh
     return TerrainChunk;
-})();
-/// <reference path="noise.d.ts"/>
-// Terrain generators are objects that answer the question:
-// "what voxel is there at coordinates x,y,z?"
-// They just give the 'natural' state of the world, ie before modifications
-var TerrainGenerator = (function () {
-    function TerrainGenerator() {
-    }
-    // returns a SolidVoxel.TYPE_* constant
-    // coordinates are in the Terrain Frame of Reference (TFOR)
-    TerrainGenerator.prototype.getSolidVoxelType = function (x, y, z) {
-        // under altitude, return dirt and rock
-        // else, return empty
-        var altitude = 1.0 + 0.8 * noise.perlin2(x * 0.2, z * 0.2);
-        if (y > altitude) {
-            return SolidVoxel.TYPE_EMPTY;
-        }
-        else {
-            if (y < altitude * 0.8) {
-                return SolidVoxel.TYPE_ROCK;
-            }
-            else {
-                return SolidVoxel.TYPE_DIRT;
-            }
-        }
-    };
-    return TerrainGenerator;
 })();

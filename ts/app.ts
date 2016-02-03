@@ -1,4 +1,5 @@
 /// <reference path="../bower_components/babylonjs/dist/babylon.2.2.d.ts"/>
+/// <reference path="terraingenerator.ts"/>
 
 var canvas: HTMLCanvasElement;
 var engine: BABYLON.Engine;
@@ -139,3 +140,17 @@ var EasingFunctions = {
     // acceleration until halfway, then deceleration 
     easeInOutQuint: function(t) { return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * (--t) * t * t * t * t; }
 };
+
+function setMeshColor(mesh: BABYLON.Mesh, value: BABYLON.Color3) {
+    var colors = [];
+    var count = mesh.getTotalVertices() * 4;
+    var i;
+    for(i=0; i<count; i+=4) {
+        colors[i] = value.r;
+        colors[i+1] = value.g;
+        colors[i+2] = value.b;
+        colors[i+3] = 1;
+    }
+
+    mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, colors);
+}

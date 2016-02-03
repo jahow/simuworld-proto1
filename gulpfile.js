@@ -15,6 +15,7 @@ var cache = require('gulp-cached');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var ts = require('gulp-typescript');
+var tsProject = ts.createProject('./ts/tsconfig.json');
 
 
 // launch nodemon
@@ -31,6 +32,7 @@ gulp.task('js_ext', function () {
     	'./bower_components/babylonjs/dist/babylon.2.2.js',
     	'./bower_components/pepjs/dist/pep.min.js'
 	])
+    .pipe(cache('js_ext'))
 	.pipe(concat('inc.min.js'))
 	//.pipe(uglify())
 	.pipe(gulp.dest('./public/'))
@@ -53,7 +55,9 @@ gulp.task('lint', function () {
 
 // compile typescript files
 gulp.task('ts', function () {
+	/*
 	var stream = gulp.src(['./ts/*.ts',])
+    .pipe(cache('ts'))
 	.pipe(ts({
 		noImplicitAny: false,
 		out: 'ts_output.js'
@@ -62,6 +66,15 @@ gulp.task('ts', function () {
 	.on('error', errorHandler);
 
 	return stream;	// hint end of task
+	*/	
+	var stream = gulp.src(['./ts/*.ts'])
+    //.pipe(cache('ts'))
+	.pipe(ts(tsProject))
+	.pipe(gulp.dest('./js/'))
+	.on('error', errorHandler);
+
+	return stream;	// hint end of task
+
 });
 
 // concat and minify js sources to public
@@ -87,6 +100,7 @@ gulp.task('css', function () {
 	var stream = gulp.src([
     	'./css/*.css'
 	])
+    .pipe(cache('css'))
 	.pipe(concat('style.min.css'))
 	.pipe(gulp.dest('./public/'))
 	.on('error', errorHandler);
