@@ -133,6 +133,7 @@ class TerrainChunk {
 		var v3 = new BABYLON.Vector3(0, 0, 0);
 		var v4 = new BABYLON.Vector3(0, 0, 0);
 		var v_shift = new BABYLON.Vector3(0, 0, 0);
+		var normal = new BABYLON.Vector3(0, 0, 0);
 
 		// start mesh building, planning 40 quads min
 		MeshBuilder.startMesh(160, 80);
@@ -220,6 +221,7 @@ class TerrainChunk {
 					v4.copyFromFloats( s*i[0]+ou[0]+dv[0],	s*i[1]+ou[1]+dv[1],		s*i[2]+ou[2]+dv[2]	);
 
 					v_shift.copyFromFloats(s*inc[0]*0.5, s*inc[1]*0.5, s*inc[2]*0.5);
+					normal.copyFromFloats(inc[0], inc[1], inc[2]);
 
 					// shift and assign vertices according to direction
 					if(byte_mask == 1) {
@@ -227,14 +229,19 @@ class TerrainChunk {
 						v2.addInPlace(v_shift);
 						v3.addInPlace(v_shift);
 						v4.addInPlace(v_shift);
-						MeshBuilder.addQuad(v1, v2, v3, v4, SolidVoxel.getTypeData(type_current).color);
+						MeshBuilder.addQuad(v1, v2, v3, v4,
+							SolidVoxel.getTypeData(type_current).color,
+							normal);
 					}
 					else {
+						normal.scaleInPlace(-1);
 						v1.subtractInPlace(v_shift);
 						v2.subtractInPlace(v_shift);
 						v3.subtractInPlace(v_shift);
 						v4.subtractInPlace(v_shift);
-						MeshBuilder.addQuad(v1, v4, v3, v2, SolidVoxel.getTypeData(type_current).color);
+						MeshBuilder.addQuad(v1, v4, v3, v2,
+							SolidVoxel.getTypeData(type_current).color,
+							normal);
 					}
 
 					// zero out region

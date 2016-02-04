@@ -97,21 +97,26 @@ class MeshBuilder {
 
 	// normals a perpendicular to the vectors v1v2 and v1v4
 	// anti-clockwise: v1, v2, v3, v4
+	// normal is optional
 	public static addQuad(v1: BABYLON.Vector3, v2: BABYLON.Vector3,
 						v3: BABYLON.Vector3, v4: BABYLON.Vector3,
-						color?: BABYLON.Color4 | BABYLON.Color3) {
+						color?: BABYLON.Color4 | BABYLON.Color3,
+						normal?: BABYLON.Vector3) {
 
 		var builder = MeshBuilder._getInstance();
 		builder._i1 = builder._vertex_position;
-		builder._v1.copyFrom(v4).subtractInPlace(v1);
-		builder._v2.copyFrom(v2).subtractInPlace(v1);
-		BABYLON.Vector3.CrossToRef(builder._v1, builder._v2, builder._v3);
-		builder._v3.normalize();
+		if(!normal) {
+			builder._v1.copyFrom(v4).subtractInPlace(v1);
+			builder._v2.copyFrom(v2).subtractInPlace(v1);
+			BABYLON.Vector3.CrossToRef(builder._v1, builder._v2, builder._v3);
+			builder._v3.normalize();
+			normal = builder._v3;
+		}
 
-		MeshBuilder.addVertex(v1, builder._v3, color);
-		MeshBuilder.addVertex(v2, builder._v3, color);
-		MeshBuilder.addVertex(v3, builder._v3, color);
-		MeshBuilder.addVertex(v4, builder._v3, color);
+		MeshBuilder.addVertex(v1, normal, color);
+		MeshBuilder.addVertex(v2, normal, color);
+		MeshBuilder.addVertex(v3, normal, color);
+		MeshBuilder.addVertex(v4, normal, color);
 		builder._addToArray(builder._indices,
 			[	builder._i1, builder._i1+1, builder._i1+2,
 				builder._i1, builder._i1+2, builder._i1+3	],
