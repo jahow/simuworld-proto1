@@ -144,6 +144,10 @@ function onPointerMove(evt) {
 function onPointerUp(evt) {
 }
 function onPointerDown(evt) {
+    // picking
+    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+    if (pickResult.hit) {
+    }
 }
 // TOOLS
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
@@ -410,13 +414,13 @@ var TerrainChunk = (function () {
         var me = this;
         return new Promise(function (resolve, reject) {
             setTimeout(function () {
-                me._rebuildChunkMesh();
+                me._rebuildVisibleChunkMesh();
                 resolve();
             }, 0);
         });
     };
-    // does the actual chunk rebuilding; must be wrapped in a promise
-    TerrainChunk.prototype._rebuildChunkMesh = function () {
+    // does the actual chunk rebuilding
+    TerrainChunk.prototype._rebuildVisibleChunkMesh = function () {
         //console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z);
         Timer.start();
         // clear existing mesh
@@ -570,52 +574,10 @@ var TerrainChunk = (function () {
                 }
             }
         }
-        /*
-                // mesh building is done in columns
-        
-                for(var x = 0; x < this.chunk_data.length; x++) {
-                    for(var z = 0; z < this.chunk_data[x].length; z++) {
-        
-                        // starting at y=0, check for how long the voxel type is similar
-                        base_y = 0;
-                        base_type = this.chunk_data[x][z][base_y];
-        
-                        for(current_y = 0; current_y < this.chunk_data[x][z].length; current_y++) {
-        
-                            current_type = this.chunk_data[x][z][current_y];
-        
-                            // voxels are different (or we reached the top of the chunk): generate a mesh
-                            if(current_type != base_type || current_y == this.chunk_data[x][z].length - 1) {
-        
-                                // only generate mesh if it's not empty
-                                if(base_type != SolidVoxel.TYPE_EMPTY) {
-                                    voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
-                                    voxel_mesh.scaling.y = current_y - base_y;
-                                    voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
-                                    voxel_mesh.position.y = SolidVoxel.SIZE * (base_y + (current_y - base_y) * 0.5);
-                                    voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
-                                    voxel_mesh.bakeCurrentTransformIntoVertices();
-                                    setMeshColor(voxel_mesh, base_type.color);
-                                    meshes.push(voxel_mesh);
-                                }
-        
-                                // save new base type
-                                base_type = current_type;
-                                base_y = current_y;
-        
-                            }
-        
-                        }
-        
-                    }
-                }
-        
-                var mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
-                mesh.parent = TerrainChunk.common_root;
-        */
         this.visible_mesh = MeshBuilder.endMesh("chunk", scene, TerrainChunk.common_root);
         this.visible_mesh.position.x = this.tfor_x;
         this.visible_mesh.position.z = this.tfor_z;
+        this.visible_mesh.isPickable = true;
         //console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z+" -- END");
         Timer.end('chunk_rebuild');
     };
@@ -645,3 +607,28 @@ var chunkRebuildPromise;
 var tmp0 = 0, tmp1 = 0, tmp2 = 0, tmp3 = 0, tmp4 = 0;
 var tmpX = 0, tmpY = 0, tmpZ = 0;
 var tmpArray = [];
+/// <reference path="app.ts"/>
+/// <reference path="terrainchunk.ts"/>
+// This object (singleton) handles generating and releasing terrain chunks on the fly
+// It also allows terrain modification spanning across multiple chunks
+var Environment = (function () {
+    function Environment() {
+        // this is a collection of all the loaded chunks
+        // keys are string like so: "X:Z" where X and Z are the chunk's coordinates in the terrain frame of ref.
+        this.chunks_collection = {};
+    }
+    Environment._getInstance = function () {
+        if (!Environment._inst) {
+            Environment._inst = new Environment();
+        }
+        return Environment._inst;
+    };
+    Environment.prototype.getChunkAt = function (tfor_x, tfor_z) {
+        var inst = Environment._getInstance();
+        var chunk_x = Math.floor(tfor_x / TerrainChunk.WIDTH) * TerrainChunk.WIDTH;
+        var chunk_z = Math.floor(tfor_z / TerrainChunk.WIDTH) * TerrainChunk.WIDTH;
+        var chunk = inst.chunks_collection[chunk_x + ':' + chunk_z];
+        return chunk;
+    };
+    return Environment;
+})();

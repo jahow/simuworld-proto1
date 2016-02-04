@@ -101,6 +101,16 @@ function onPointerMove(evt: any) {
 function onPointerUp(evt: any) {
 }
 function onPointerDown(evt: any) {
+
+    // picking
+    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+    if(pickResult.hit) {
+
+        // when clicked, destroy a part of the environment
+        
+
+    }
+
 }
 
 

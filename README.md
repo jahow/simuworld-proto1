@@ -17,3 +17,5 @@ If you only need to launch the app, simply type `gulp`. This will launch a local
 # Usage
 
 Type `scene.debugLayer.show()` in the console to have access to additional info about the rendered scene.
+
+Type `Timer.getAverage('chunk_rebuild')` to see the average time taken by chunks geometry construction (in ms).

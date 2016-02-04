@@ -92,15 +92,16 @@ class TerrainChunk {
 
 		return new Promise<void>(function (resolve, reject) {
 			setTimeout(function () {
-				me._rebuildChunkMesh();
+				me._rebuildVisibleChunkMesh();
+
 				resolve();
 			}, 0);
 		});
 
 	}
 
-	// does the actual chunk rebuilding; must be wrapped in a promise
-	private _rebuildChunkMesh() {
+	// does the actual chunk rebuilding
+	private _rebuildVisibleChunkMesh() {
 
 		//console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z);
 		Timer.start();
@@ -261,55 +262,10 @@ class TerrainChunk {
 
 		}
 
-
-
-
-/*
-		// mesh building is done in columns
-
-		for(var x = 0; x < this.chunk_data.length; x++) {
-			for(var z = 0; z < this.chunk_data[x].length; z++) {
-
-				// starting at y=0, check for how long the voxel type is similar
-				base_y = 0;
-				base_type = this.chunk_data[x][z][base_y];
-
-				for(current_y = 0; current_y < this.chunk_data[x][z].length; current_y++) {
-
-					current_type = this.chunk_data[x][z][current_y];
-
-					// voxels are different (or we reached the top of the chunk): generate a mesh
-					if(current_type != base_type || current_y == this.chunk_data[x][z].length - 1) {
-
-						// only generate mesh if it's not empty
-						if(base_type != SolidVoxel.TYPE_EMPTY) {
-							voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
-							voxel_mesh.scaling.y = current_y - base_y;
-							voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
-							voxel_mesh.position.y = SolidVoxel.SIZE * (base_y + (current_y - base_y) * 0.5);
-							voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
-							voxel_mesh.bakeCurrentTransformIntoVertices();
-							setMeshColor(voxel_mesh, base_type.color);
-							meshes.push(voxel_mesh);
-						}
-
-						// save new base type
-						base_type = current_type;
-						base_y = current_y;
-
-					}
-
-				}
-
-			}
-		}
-
-		var mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
-		mesh.parent = TerrainChunk.common_root;
-*/
 		this.visible_mesh = MeshBuilder.endMesh("chunk", scene, TerrainChunk.common_root);
 		this.visible_mesh.position.x = this.tfor_x;
 		this.visible_mesh.position.z = this.tfor_z;
+		this.visible_mesh.isPickable = true;
 
 		//console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z+" -- END");
 		Timer.end('chunk_rebuild');
