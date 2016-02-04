@@ -45,8 +45,8 @@ function initGLScene() {
 
 	// temp
 	var generator = new TerrainGenerator();
-	for (var i = -4; i < 4; i++) {
-		for (var j = -4; j < 4; j++) {
+	for (var i = -10; i < 10; i++) {
+		for (var j = -10; j < 10; j++) {
 			new TerrainChunk(i * TerrainChunk.WIDTH, j * TerrainChunk.WIDTH, generator);
 		}
 	}

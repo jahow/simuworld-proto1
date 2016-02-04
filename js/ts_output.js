@@ -1,21 +1,33 @@
 var SolidVoxel = (function () {
     function SolidVoxel() {
     }
+    SolidVoxel.getTypeData = function (type) { return SolidVoxel.types_data[type]; };
     // const
     SolidVoxel.SIZE = 0.25; // 4 voxels make up one meter
     // types
-    SolidVoxel.TYPE_EMPTY = {
-        empty: true
-    };
-    SolidVoxel.TYPE_DIRT = {
-        color: new BABYLON.Color3(0.9, 0.9, 0.4)
-    };
-    SolidVoxel.TYPE_ROCK = {
-        color: new BABYLON.Color3(0.4, 0.35, 0.15)
-    };
-    SolidVoxel.TYPE_GRASS = {
-        color: new BABYLON.Color3(0.2, 0.95, 0.3)
-    };
+    SolidVoxel.TYPE_EMPTY = 0;
+    SolidVoxel.TYPE_DIRT = 1;
+    SolidVoxel.TYPE_ROCK = 2;
+    SolidVoxel.TYPE_GRASS = 3;
+    // type data
+    SolidVoxel.types_data = [
+        // EMPTY
+        {
+            empty: true
+        },
+        //DIRT
+        {
+            color: new BABYLON.Color3(0.9, 0.9, 0.4)
+        },
+        // ROCK
+        {
+            color: new BABYLON.Color3(0.4, 0.35, 0.15)
+        },
+        // GRASS
+        {
+            color: new BABYLON.Color3(0.2, 0.95, 0.3)
+        }
+    ];
     return SolidVoxel;
 })();
 /// <reference path="noise.d.ts"/>
@@ -84,8 +96,8 @@ function initGLScene() {
     document.addEventListener("pointerout", onPointerUp, false);
     // temp
     var generator = new TerrainGenerator();
-    for (var i = -4; i < 4; i++) {
-        for (var j = -4; j < 4; j++) {
+    for (var i = -10; i < 10; i++) {
+        for (var j = -10; j < 10; j++) {
             new TerrainChunk(i * TerrainChunk.WIDTH, j * TerrainChunk.WIDTH, generator);
         }
     }
@@ -222,7 +234,118 @@ var Timer = (function () {
     };
     return Timer;
 })();
+/// <reference path="../bower_components/babylonjs/dist/babylon.2.2.d.ts"/>
+// This is a utility class that produces a mesh by building it
+// step by step with simple operations: add quad, etc.
+var MeshBuilder = (function () {
+    function MeshBuilder() {
+        // temporary vars
+        this._v1 = new BABYLON.Vector3(0, 0, 0);
+        this._v2 = new BABYLON.Vector3(0, 0, 0);
+        this._v3 = new BABYLON.Vector3(0, 0, 0);
+        this._i1 = 0;
+        this._i2 = 0;
+        this._i3 = 0;
+    }
+    MeshBuilder._getInstance = function () {
+        if (!MeshBuilder._inst) {
+            MeshBuilder._inst = new MeshBuilder();
+        }
+        return MeshBuilder._inst;
+    };
+    // vertex and index counts are used to allocate an array large enough if possible
+    // if unknown, leave blank
+    MeshBuilder.startMesh = function (vertex_count, triangle_count) {
+        var builder = MeshBuilder._getInstance();
+        if (!vertex_count) {
+            vertex_count = 0;
+        }
+        if (!triangle_count) {
+            triangle_count = 0;
+        }
+        // init
+        builder._positions = new Array(vertex_count * 3);
+        builder._normals = new Array(vertex_count * 3);
+        builder._colors = new Array(vertex_count * 4);
+        builder._indices = new Array(triangle_count * 3);
+        builder._vertex_position = 0;
+        builder._triangle_position = 0;
+    };
+    // finalize mesh and return it
+    MeshBuilder.endMesh = function (name, scene, parent) {
+        var builder = MeshBuilder._getInstance();
+        var mesh = new BABYLON.Mesh(name, scene, parent);
+        mesh.setIndices(builder._indices);
+        mesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, builder._positions);
+        mesh.setVerticesData(BABYLON.VertexBuffer.ColorKind, builder._colors);
+        mesh.setVerticesData(BABYLON.VertexBuffer.NormalKind, builder._normals);
+        return mesh;
+    };
+    // MESH BUILDING
+    MeshBuilder.addVertex = function (pos, norm, col) {
+        if (!col) {
+            col = new BABYLON.Color4(1, 1, 1, 1);
+        }
+        var builder = MeshBuilder._getInstance();
+        builder._addToArray(builder._positions, [pos.x, pos.y, pos.z], builder._vertex_position * 3);
+        builder._addToArray(builder._normals, [norm.x, norm.y, norm.z], builder._vertex_position * 3);
+        builder._addToArray(builder._colors, [col.r, col.g, col.b, (col['a'] ? col['a'] : 1)], builder._vertex_position * 4);
+        builder._vertex_position += 1;
+    };
+    // normals are perpendicular to the triangle
+    // anti-clockwise: v1, v2, v3
+    MeshBuilder.addTriangle = function (v1, v2, v3, color) {
+        var builder = MeshBuilder._getInstance();
+        builder._i1 = builder._vertex_position;
+        builder._v1.copyFrom(v3).subtractInPlace(v1);
+        builder._v2.copyFrom(v2).subtractInPlace(v1);
+        BABYLON.Vector3.CrossToRef(builder._v1, builder._v2, builder._v3);
+        builder._v3.normalize();
+        MeshBuilder.addVertex(v1, builder._v3, color);
+        MeshBuilder.addVertex(v2, builder._v3, color);
+        MeshBuilder.addVertex(v3, builder._v3, color);
+        builder._addToArray(builder._indices, [builder._i1, builder._i1 + 1, builder._i1 + 2], builder._triangle_position * 3);
+        builder._triangle_position += 1;
+    };
+    // normals a perpendicular to the vectors v1v2 and v1v4
+    // anti-clockwise: v1, v2, v3, v4
+    MeshBuilder.addQuad = function (v1, v2, v3, v4, color) {
+        var builder = MeshBuilder._getInstance();
+        builder._i1 = builder._vertex_position;
+        builder._v1.copyFrom(v4).subtractInPlace(v1);
+        builder._v2.copyFrom(v2).subtractInPlace(v1);
+        BABYLON.Vector3.CrossToRef(builder._v1, builder._v2, builder._v3);
+        builder._v3.normalize();
+        MeshBuilder.addVertex(v1, builder._v3, color);
+        MeshBuilder.addVertex(v2, builder._v3, color);
+        MeshBuilder.addVertex(v3, builder._v3, color);
+        MeshBuilder.addVertex(v4, builder._v3, color);
+        builder._addToArray(builder._indices, [builder._i1, builder._i1 + 1, builder._i1 + 2,
+            builder._i1, builder._i1 + 2, builder._i1 + 3], builder._triangle_position * 3);
+        builder._triangle_position += 2;
+    };
+    // helper
+    MeshBuilder.prototype._addToArray = function (array, values, index) {
+        if (typeof values === "number") {
+            if (array.length <= index) {
+                array.push(values);
+            }
+            else {
+                array[index] = values;
+            }
+            return;
+        }
+        if (values instanceof Array) {
+            for (var i = 0; i < values.length; i++) {
+                this._addToArray(array, values[i], index + i);
+            }
+            return;
+        }
+    };
+    return MeshBuilder;
+})();
 /// <reference path="app.ts"/>
+/// <reference path="meshbuilder.ts"/>
 /// <reference path="es6-promise.d.ts"/>
 // Chunks are small pieces of land
 // they consist of one mesh and thus are drawn by a single call
@@ -296,41 +419,194 @@ var TerrainChunk = (function () {
         if (this.visible_mesh) {
             this.visible_mesh.dispose();
         }
-        var meshes = []; // list of meshes to merge
-        var voxel_mesh;
-        var base_type, current_type;
-        var base_y, current_y;
-        // mesh building is done in columns
-        for (var x = 0; x < this.chunk_data.length; x++) {
-            for (var z = 0; z < this.chunk_data[x].length; z++) {
-                // starting at y=0, check for how long the voxel type is similar
-                base_y = 0;
-                base_type = this.chunk_data[x][z][base_y];
-                for (current_y = 0; current_y < this.chunk_data[x][z].length; current_y++) {
-                    current_type = this.chunk_data[x][z][current_y];
-                    // voxels are different (or we reached the top of the chunk): generate a mesh
-                    if (current_type != base_type || current_y == this.chunk_data[x][z].length - 1) {
-                        // only generate mesh if it's not empty
-                        if (base_type != SolidVoxel.TYPE_EMPTY) {
-                            voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
-                            voxel_mesh.scaling.y = current_y - base_y;
-                            voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
-                            voxel_mesh.position.y = SolidVoxel.SIZE * (base_y + (current_y - base_y) * 0.5);
-                            voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
-                            voxel_mesh.bakeCurrentTransformIntoVertices();
-                            setMeshColor(voxel_mesh, base_type.color);
-                            meshes.push(voxel_mesh);
+        // temp vars
+        var d0; // which axis we're on
+        var d1, d2; // secondary axis
+        var mask; // each value holds if there is a visible voxel as back_type and/or front_type
+        var dims = [
+            this.chunk_data.length,
+            this.chunk_data[0][0].length,
+            this.chunk_data[0].length
+        ];
+        var i = [0, 0, 0]; // current voxel indices
+        var j, k, l, m;
+        var inc = [0, 0, 0]; // increment on main axis
+        var type_current, type_forward, type_backward, type_other; // these are numbers
+        var width, height; // dimension of the current quad
+        var byte_mask;
+        var s = SolidVoxel.SIZE; // shortcut
+        var du = [0, 0, 0], dv = [0, 0, 0]; // used to build the quads
+        var ou = [0, 0, 0], ov = [0, 0, 0]; // offset for quads
+        var do_break;
+        var v1 = new BABYLON.Vector3(0, 0, 0);
+        var v2 = new BABYLON.Vector3(0, 0, 0);
+        var v3 = new BABYLON.Vector3(0, 0, 0);
+        var v4 = new BABYLON.Vector3(0, 0, 0);
+        var v_shift = new BABYLON.Vector3(0, 0, 0);
+        // start mesh building, planning 40 quads min
+        MeshBuilder.startMesh(160, 80);
+        // loop on 3 axis
+        for (d0 = 0; d0 < 3; d0++) {
+            // compute secondary directions
+            d1 = (d0 + 1) % 3;
+            d2 = (d0 + 2) % 3;
+            // compute increment on main axis
+            inc[d0] = 1;
+            inc[d1] = 0;
+            inc[d2] = 0;
+            // traverse the chunk in the current axis
+            for (i[d0] = 0; i[d0] < dims[d0]; i[d0]++) {
+                // init mask
+                mask = new Uint8Array(dims[d1] * dims[d2]);
+                // fill up the mask
+                for (i[d1] = 0; i[d1] < dims[d1]; i[d1]++) {
+                    for (i[d2] = 0; i[d2] < dims[d2]; i[d2]++) {
+                        type_current = this._getVoxelType(i[0], i[1], i[2]);
+                        type_forward = this._getVoxelType(i[0] + inc[0], i[1] + inc[1], i[2] + inc[2]);
+                        type_backward = this._getVoxelType(i[0] - inc[0], i[1] - inc[1], i[2] - inc[2]);
+                        mask[i[d1] * dims[d2] + i[d2]] =
+                            (type_current && !type_forward ? 1 : 0)
+                                | (type_current && !type_backward ? 2 : 0);
+                    }
+                }
+                // generate quads based on mask
+                for (j = 0; j < dims[d1]; j++) {
+                    for (k = 0; k < dims[d2]; k++) {
+                        // handle mask for forward and backward values
+                        for (byte_mask = 1; byte_mask <= 2; byte_mask++) {
+                            // skip if mask is unset here
+                            if (!(mask[j * dims[d2] + k] & byte_mask)) {
+                                continue;
+                            }
+                            i[d1] = j;
+                            i[d2] = k;
+                            type_current = this._getVoxelType(i[0], i[1], i[2]);
+                            // extend width
+                            width = 1;
+                            while (j + width < dims[d1] && (mask[(j + width) * dims[d2] + k] & byte_mask)) {
+                                // check that type is consistent
+                                i[d1] = j + width;
+                                i[d2] = k;
+                                type_other = this._getVoxelType(i[0], i[1], i[2]);
+                                if (type_other != type_current) {
+                                    break;
+                                }
+                                width++;
+                            }
+                            // extend height
+                            height = 1;
+                            while (k + height < dims[d2]) {
+                                // check if line is still valid
+                                do_break = false;
+                                for (l = j; l < j + width; l++) {
+                                    if (!(mask[l * dims[d2] + k + height] & byte_mask)) {
+                                        do_break = true;
+                                        break;
+                                    }
+                                    // check that type is consistent
+                                    i[d1] = l;
+                                    i[d2] = k + height;
+                                    type_other = this._getVoxelType(i[0], i[1], i[2]);
+                                    if (type_other != type_current) {
+                                        do_break = true;
+                                        break;
+                                    }
+                                }
+                                if (do_break) {
+                                    break;
+                                }
+                                height++;
+                            }
+                            // generate quad
+                            i[d1] = j;
+                            i[d2] = k;
+                            ou[d0] = 0;
+                            ou[d1] = 0;
+                            ou[d2] = -s * 0.5;
+                            ov[d0] = 0;
+                            ov[d1] = -s * 0.5;
+                            ov[d2] = 0;
+                            du[d0] = 0;
+                            du[d1] = 0;
+                            du[d2] = s * (height - 0.5);
+                            dv[d0] = 0;
+                            dv[d1] = s * (width - 0.5);
+                            dv[d2] = 0;
+                            v1.copyFromFloats(s * i[0] + ou[0] + ov[0], s * i[1] + ou[1] + ov[1], s * i[2] + ou[2] + ov[2]);
+                            v2.copyFromFloats(s * i[0] + du[0] + ov[0], s * i[1] + du[1] + ov[1], s * i[2] + du[2] + ov[2]);
+                            v3.copyFromFloats(s * i[0] + du[0] + dv[0], s * i[1] + du[1] + dv[1], s * i[2] + du[2] + dv[2]);
+                            v4.copyFromFloats(s * i[0] + ou[0] + dv[0], s * i[1] + ou[1] + dv[1], s * i[2] + ou[2] + dv[2]);
+                            v_shift.copyFromFloats(s * inc[0] * 0.5, s * inc[1] * 0.5, s * inc[2] * 0.5);
+                            // shift and assign vertices according to direction
+                            if (byte_mask == 1) {
+                                v1.addInPlace(v_shift);
+                                v2.addInPlace(v_shift);
+                                v3.addInPlace(v_shift);
+                                v4.addInPlace(v_shift);
+                                MeshBuilder.addQuad(v1, v2, v3, v4, SolidVoxel.getTypeData(type_current).color);
+                            }
+                            else {
+                                v1.subtractInPlace(v_shift);
+                                v2.subtractInPlace(v_shift);
+                                v3.subtractInPlace(v_shift);
+                                v4.subtractInPlace(v_shift);
+                                MeshBuilder.addQuad(v1, v4, v3, v2, SolidVoxel.getTypeData(type_current).color);
+                            }
+                            // zero out region
+                            for (l = j; l < j + width; l++) {
+                                for (m = k; m < k + height; m++) {
+                                    mask[l * dims[d2] + m] = mask[l * dims[d2] + m] & ~byte_mask;
+                                }
+                            }
                         }
-                        // save new base type
-                        base_type = current_type;
-                        base_y = current_y;
                     }
                 }
             }
         }
-        var mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
-        mesh.parent = TerrainChunk.common_root;
-        this.visible_mesh = mesh;
+        /*
+                // mesh building is done in columns
+        
+                for(var x = 0; x < this.chunk_data.length; x++) {
+                    for(var z = 0; z < this.chunk_data[x].length; z++) {
+        
+                        // starting at y=0, check for how long the voxel type is similar
+                        base_y = 0;
+                        base_type = this.chunk_data[x][z][base_y];
+        
+                        for(current_y = 0; current_y < this.chunk_data[x][z].length; current_y++) {
+        
+                            current_type = this.chunk_data[x][z][current_y];
+        
+                            // voxels are different (or we reached the top of the chunk): generate a mesh
+                            if(current_type != base_type || current_y == this.chunk_data[x][z].length - 1) {
+        
+                                // only generate mesh if it's not empty
+                                if(base_type != SolidVoxel.TYPE_EMPTY) {
+                                    voxel_mesh = BABYLON.Mesh.CreateBox("chunk", SolidVoxel.SIZE, scene);
+                                    voxel_mesh.scaling.y = current_y - base_y;
+                                    voxel_mesh.position.x = SolidVoxel.SIZE * (x + 0.5);
+                                    voxel_mesh.position.y = SolidVoxel.SIZE * (base_y + (current_y - base_y) * 0.5);
+                                    voxel_mesh.position.z = SolidVoxel.SIZE * (z + 0.5);
+                                    voxel_mesh.bakeCurrentTransformIntoVertices();
+                                    setMeshColor(voxel_mesh, base_type.color);
+                                    meshes.push(voxel_mesh);
+                                }
+        
+                                // save new base type
+                                base_type = current_type;
+                                base_y = current_y;
+        
+                            }
+        
+                        }
+        
+                    }
+                }
+        
+                var mesh = BABYLON.Mesh.MergeMeshes(meshes, true, true);
+                mesh.parent = TerrainChunk.common_root;
+        */
+        this.visible_mesh = MeshBuilder.endMesh("chunk", scene, TerrainChunk.common_root);
         this.visible_mesh.position.x = this.tfor_x;
         this.visible_mesh.position.z = this.tfor_z;
         //console.log("rebuilding mesh at x:"+me.tfor_x+" z:"+me.tfor_z+" -- END");
@@ -339,6 +615,15 @@ var TerrainChunk = (function () {
     // this rebuilds the navigation mesh
     TerrainChunk.prototype.rebuildNavigationMesh = function () {
         // todo
+    };
+    // helpers
+    TerrainChunk.prototype._getVoxelType = function (x, y, z) {
+        if (x < 0 || x >= this.chunk_data.length ||
+            z < 0 || z >= this.chunk_data[0].length ||
+            y < 0 || y >= this.chunk_data[0][0].length) {
+            return SolidVoxel.TYPE_EMPTY;
+        }
+        return this.chunk_data[x][z][y];
     };
     // constants
     TerrainChunk.WIDTH = 4; // in meters
@@ -349,3 +634,7 @@ var TerrainChunk = (function () {
 // this object handles the queueing of chunk rebuilds
 //var chunkRebuildManager = { };
 var chunkRebuildPromise;
+// temporary vars
+var tmp0 = 0, tmp1 = 0, tmp2 = 0, tmp3 = 0, tmp4 = 0;
+var tmpX = 0, tmpY = 0, tmpZ = 0;
+var tmpArray = [];

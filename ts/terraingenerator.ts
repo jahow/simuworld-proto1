@@ -13,7 +13,7 @@ class TerrainGenerator {
 
 	// returns a SolidVoxel.TYPE_* constant
 	// coordinates are in the Terrain Frame of Reference (TFOR)
-	getSolidVoxelType(x: number, y: number, z: number) : SolidVoxelType {
+	getSolidVoxelType(x: number, y: number, z: number) : number {
 
 
 		// under altitude, return dirt and rock
