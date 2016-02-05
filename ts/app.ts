@@ -1,5 +1,6 @@
 /// <reference path="../bower_components/babylonjs/dist/babylon.2.2.d.ts"/>
 /// <reference path="terraingenerator.ts"/>
+/// <reference path="environment.ts"/>
 
 var canvas: HTMLCanvasElement;
 var engine: BABYLON.Engine;
@@ -26,9 +27,9 @@ function initGLScene() {
 	}
 
 	scene = new BABYLON.Scene(engine);
-	camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0, 35, new BABYLON.Vector3(0, 0, 0), scene);
+	camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.95, 35, new BABYLON.Vector3(0, 0, 0), scene);
 	adjustCameraFov();
-	camera.attachControl(canvas);
+	//camera.attachControl(canvas);
 
 	scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
@@ -44,12 +45,15 @@ function initGLScene() {
 	document.addEventListener("pointerout", onPointerUp, false);
 
 	// temp
+	/*
 	var generator = new TerrainGenerator();
 	for (var i = -10; i < 10; i++) {
 		for (var j = -10; j < 10; j++) {
 			new TerrainChunk(i * TerrainChunk.WIDTH, j * TerrainChunk.WIDTH, generator);
 		}
 	}
+	*/
+	Environment.init();
 
 	// start loop
 	BABYLON.Tools.QueueNewFrame(renderLoop);
@@ -77,6 +81,8 @@ var update = function() {
 		mouseY_world = pick_info.pickedPoint.z;
 	}
 
+	Environment.update();
+
 	adjustCameraFov();
 };
 
@@ -97,6 +103,16 @@ function adjustCameraFov() {
 function onPointerMove(evt: any) {
 	mouseX = evt.clientX;
 	mouseY = evt.clientY;
+
+	
+    // picking
+    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+    if(pickResult.hit) {
+
+        // when clicked, destroy a part of the environment
+        Environment.carveTerrain(pickResult.pickedPoint.x, pickResult.pickedPoint.y, pickResult.pickedPoint.z, 0.5);
+
+    }
 }
 function onPointerUp(evt: any) {
 }
@@ -107,7 +123,7 @@ function onPointerDown(evt: any) {
     if(pickResult.hit) {
 
         // when clicked, destroy a part of the environment
-        
+        //Environment.carveTerrain(pickResult.pickedPoint.x, pickResult.pickedPoint.y, pickResult.pickedPoint.z, 0.5);
 
     }
 

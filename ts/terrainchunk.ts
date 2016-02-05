@@ -21,6 +21,8 @@ class TerrainChunk {
 	static HEIGHT = 16;
 	static SUBDIVISIONS = 4;	// used for walkable mesh
 
+	public tfor_y = 0;		// temp: chunks are all sitting on the ground
+
 	// coordinates in the TFOR
 	constructor(public tfor_x: number, public tfor_z: number, generator: TerrainGenerator) {
 
@@ -67,6 +69,25 @@ class TerrainChunk {
 	// this mesh is build according to voxels in the chunk
 	// used for entity navigation (invisible)
 	navigation_mesh: BABYLON.Mesh;
+
+	// todo: make this more general
+	public carveTerrain(tfor_x: number, tfor_y: number, tfor_z: number, radius: number) {
+
+		var start_indices = this._getChunkIndices(tfor_x - radius, tfor_y - radius, tfor_z - radius);
+		var end_indices = this._getChunkIndices(tfor_x + radius, tfor_y + radius, tfor_z + radius);
+		var i, j, k;
+
+		for(i = start_indices.x; i <= end_indices.x; i++) {
+			for(j = start_indices.y; j <= end_indices.y; j++) {
+				for(k = start_indices.z; k <= end_indices.z; k++) {
+					this._setVoxelType(i, j, k, SolidVoxel.TYPE_EMPTY);
+				}
+			}			
+		}
+
+		this.askChunkMeshRebuild();
+	}
+
 
 	// launches the rebuild task asynchronously
 	askChunkMeshRebuild() {
@@ -257,7 +278,6 @@ class TerrainChunk {
 				}
 				}
 
-
 			}
 
 		}
@@ -280,6 +300,8 @@ class TerrainChunk {
 	}
 
 	// helpers
+
+	// x, y, z are voxel indices
 	private _getVoxelType(x, y, z): number {
 		if(x < 0 || x >= this.chunk_data.length ||
 			z < 0 || z >= this.chunk_data[0].length ||
@@ -287,6 +309,24 @@ class TerrainChunk {
 			return SolidVoxel.TYPE_EMPTY;
 		}
 		return this.chunk_data[x][z][y];
+	}
+
+	// x, y, z are voxel indices
+	private _setVoxelType(x, y, z, type: number) {
+		if(x < 0 || x >= this.chunk_data.length ||
+			z < 0 || z >= this.chunk_data[0].length ||
+			y < 0 || y >= this.chunk_data[0][0].length) {
+			return;
+		}
+		this.chunk_data[x][z][y] = type;
+	}
+
+	private _getChunkIndices(tfor_x, tfor_y, tfor_z): {x: number, y: number, z: number} {
+		return {
+			x: Math.floor( (tfor_x - this.tfor_x) / SolidVoxel.SIZE ),
+			y: Math.floor( (tfor_y - this.tfor_y) / SolidVoxel.SIZE ),
+			z: Math.floor( (tfor_z - this.tfor_z) / SolidVoxel.SIZE )
+		}
 	}
 
 }
