@@ -19,14 +19,21 @@ class TerrainGenerator {
 		// under altitude, return dirt and rock
 		// else, return empty
 
-		var altitude = 2.0 + 0.9 * noise.perlin2(x * 0.2, z * 0.2);
-		var altitude2 = 1.8 + 0.8 * noise.perlin2(x * 0.05 + 100, z * 0.05 + 100);
+		var altitude = 2.0 + 0.9 * noise.perlin2(x * 0.1, z * 0.1) +
+							 0.45 * noise.perlin2(x * 0.2, z * 0.2);
+		var altitude2 = 1.1 + 0.5 * noise.perlin2(x * 0.05 + 100, z * 0.05 + 100);
+		var grass = noise.perlin2(x * 0.2 + 1000, z * 0.2 + 100) +
+					0.33 * noise.perlin2(x * 0.6 + 1000, z * 0.6 + 100) +
+					0.167 * noise.perlin2(x * 0.9 + 1000, z * 0.9 + 100);
 
 		if (y > altitude) { return SolidVoxel.TYPE_EMPTY; }
 		else {
 
 			if (y < altitude2) { return SolidVoxel.TYPE_ROCK; }
-			else { return SolidVoxel.TYPE_DIRT; }
+			else {
+				if(y > altitude - 0.4 && grass > 0.35) { return SolidVoxel.TYPE_GRASS; }
+				return SolidVoxel.TYPE_DIRT;
+			}
 
 		}
 	}

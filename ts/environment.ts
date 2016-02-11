@@ -28,6 +28,20 @@ class Environment {
 
 	public static init() {
 
+		// temp
+		BABYLON.SceneLoader.ImportMesh('', '', 'character.babylon', scene, function (meshes) {
+			var char = <BABYLON.Mesh>meshes[0];
+			var mat = new BABYLON.StandardMaterial('char_mat', scene);
+
+			mat.diffuseTexture = new BABYLON.Texture('char_diffuse.png', scene);
+			mat.emissiveTexture = new BABYLON.Texture('char_emissive.png', scene);
+			mat.useEmissiveAsIllumination = true;
+			char.material = mat;
+
+			char.position.y = 2;
+			char.scaling.copyFromFloats(0.1, 0.1, 0.1);
+		});
+
 	}
 
 	public static update() {

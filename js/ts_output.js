@@ -17,15 +17,15 @@ var SolidVoxel = (function () {
         },
         //DIRT
         {
-            color: new BABYLON.Color3(0.9, 0.9, 0.4)
+            color: new BABYLON.Color3(0.58, 0.58, 0.49)
         },
         // ROCK
         {
-            color: new BABYLON.Color3(0.4, 0.35, 0.15)
+            color: new BABYLON.Color3(0.27, 0.27, 0.27)
         },
         // GRASS
         {
-            color: new BABYLON.Color3(0.2, 0.95, 0.3)
+            color: new BABYLON.Color3(0.2, 0.6, 0.3)
         }
     ];
     return SolidVoxel;
@@ -43,8 +43,12 @@ var TerrainGenerator = (function () {
     TerrainGenerator.prototype.getSolidVoxelType = function (x, y, z) {
         // under altitude, return dirt and rock
         // else, return empty
-        var altitude = 2.0 + 0.9 * noise.perlin2(x * 0.2, z * 0.2);
-        var altitude2 = 1.8 + 0.8 * noise.perlin2(x * 0.05 + 100, z * 0.05 + 100);
+        var altitude = 2.0 + 0.9 * noise.perlin2(x * 0.1, z * 0.1) +
+            0.45 * noise.perlin2(x * 0.2, z * 0.2);
+        var altitude2 = 1.1 + 0.5 * noise.perlin2(x * 0.05 + 100, z * 0.05 + 100);
+        var grass = noise.perlin2(x * 0.2 + 1000, z * 0.2 + 100) +
+            0.33 * noise.perlin2(x * 0.6 + 1000, z * 0.6 + 100) +
+            0.167 * noise.perlin2(x * 0.9 + 1000, z * 0.9 + 100);
         if (y > altitude) {
             return SolidVoxel.TYPE_EMPTY;
         }
@@ -53,6 +57,9 @@ var TerrainGenerator = (function () {
                 return SolidVoxel.TYPE_ROCK;
             }
             else {
+                if (y > altitude - 0.4 && grass > 0.35) {
+                    return SolidVoxel.TYPE_GRASS;
+                }
                 return SolidVoxel.TYPE_DIRT;
             }
         }
@@ -481,6 +488,17 @@ var Environment = (function () {
         return Environment._inst;
     };
     Environment.init = function () {
+        // temp
+        BABYLON.SceneLoader.ImportMesh('', '', 'character.babylon', scene, function (meshes) {
+            var char = meshes[0];
+            var mat = new BABYLON.StandardMaterial('char_mat', scene);
+            mat.diffuseTexture = new BABYLON.Texture('char_diffuse.png', scene);
+            mat.emissiveTexture = new BABYLON.Texture('char_emissive.png', scene);
+            mat.useEmissiveAsIllumination = true;
+            char.material = mat;
+            char.position.y = 2;
+            char.scaling.copyFromFloats(0.1, 0.1, 0.1);
+        });
     };
     Environment.update = function () {
         var inst = Environment._getInstance();
@@ -566,17 +584,18 @@ function initGLScene() {
     scene = new BABYLON.Scene(engine);
     camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.95, 35, new BABYLON.Vector3(0, 0, 0), scene);
     adjustCameraFov();
-    //camera.attachControl(canvas);
+    camera.attachControl(canvas);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
     var light = new BABYLON.HemisphericLight("light0", new BABYLON.Vector3(0.25, 1, 0), scene);
     light.diffuse = new BABYLON.Color3(1, 1, 1);
-    light.groundColor = new BABYLON.Color3(0.12, 0.12, 0);
+    light.groundColor = new BABYLON.Color3(0.35, 0.35, 0.35);
     light.specular = new BABYLON.Color3(0, 0, 0);
     // add input events
     document.addEventListener("pointerdown", onPointerDown, false);
     document.addEventListener("pointermove", onPointerMove, false);
     document.addEventListener("pointerup", onPointerUp, false);
     document.addEventListener("pointerout", onPointerUp, false);
+    //var ssao = new BABYLON.SSAORenderingPipeline("ssao", scene, 2, [camera]);
     // temp
     /*
     var generator = new TerrainGenerator();
@@ -630,8 +649,6 @@ function onPointerMove(evt) {
     // picking
     var pickResult = scene.pick(scene.pointerX, scene.pointerY);
     if (pickResult.hit) {
-        // when clicked, destroy a part of the environment
-        Environment.carveTerrain(pickResult.pickedPoint.x, pickResult.pickedPoint.y, pickResult.pickedPoint.z, 0.5);
     }
 }
 function onPointerUp(evt) {

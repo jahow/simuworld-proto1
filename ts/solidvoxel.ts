@@ -25,17 +25,17 @@ class SolidVoxel {
 
 		//DIRT
 		{
-			color: new BABYLON.Color3(0.9, 0.9, 0.4)
+			color: new BABYLON.Color3(0.58, 0.58, 0.49)
 		},
 
 		// ROCK
 		{
-			color: new BABYLON.Color3(0.4, 0.35, 0.15)
+			color: new BABYLON.Color3(0.27, 0.27, 0.27)
 		},
 
 		// GRASS
 		{
-			color: new BABYLON.Color3(0.2, 0.95, 0.3)
+			color: new BABYLON.Color3(0.2, 0.6, 0.3)
 		}
 
 	];

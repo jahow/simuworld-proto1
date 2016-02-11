@@ -29,13 +29,13 @@ function initGLScene() {
 	scene = new BABYLON.Scene(engine);
 	camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.95, 35, new BABYLON.Vector3(0, 0, 0), scene);
 	adjustCameraFov();
-	//camera.attachControl(canvas);
+	camera.attachControl(canvas);
 
 	scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
 	var light = new BABYLON.HemisphericLight("light0", new BABYLON.Vector3(0.25, 1, 0), scene);
 	light.diffuse = new BABYLON.Color3(1, 1, 1);
-	light.groundColor = new BABYLON.Color3(0.12, 0.12, 0);
+	light.groundColor = new BABYLON.Color3(0.35, 0.35, 0.35);
 	light.specular = new BABYLON.Color3(0, 0, 0);
 
 	// add input events
@@ -43,6 +43,8 @@ function initGLScene() {
 	document.addEventListener("pointermove", onPointerMove, false);
 	document.addEventListener("pointerup", onPointerUp, false);
 	document.addEventListener("pointerout", onPointerUp, false);
+
+	//var ssao = new BABYLON.SSAORenderingPipeline("ssao", scene, 2, [camera]);
 
 	// temp
 	/*
@@ -110,7 +112,7 @@ function onPointerMove(evt: any) {
     if(pickResult.hit) {
 
         // when clicked, destroy a part of the environment
-        Environment.carveTerrain(pickResult.pickedPoint.x, pickResult.pickedPoint.y, pickResult.pickedPoint.z, 0.5);
+        //Environment.carveTerrain(pickResult.pickedPoint.x, pickResult.pickedPoint.y, pickResult.pickedPoint.z, 0.5);
 
     }
 }
