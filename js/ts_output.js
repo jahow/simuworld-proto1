@@ -582,9 +582,10 @@ function initGLScene() {
         return;
     }
     scene = new BABYLON.Scene(engine);
-    camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, 0.95, 35, new BABYLON.Vector3(0, 0, 0), scene);
-    adjustCameraFov();
-    camera.attachControl(canvas);
+    camera = new BABYLON.ArcRotateCamera("camera", -2.12, 0.8, 35, new BABYLON.Vector3(0, 0, 0), scene);
+    camera.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+    resize();
+    // camera.attachControl(canvas);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
     var light = new BABYLON.HemisphericLight("light0", new BABYLON.Vector3(0.25, 1, 0), scene);
     light.diffuse = new BABYLON.Color3(1, 1, 1);
@@ -635,6 +636,7 @@ function resize() {
     if (engine) {
         engine.resize();
         adjustCameraFov();
+        adjustOrthoCamera();
     }
 }
 function adjustCameraFov() {
@@ -642,6 +644,15 @@ function adjustCameraFov() {
     var ratio = window.devicePixelRatio;
     height /= ratio;
     //camera.fov = 0.58 + (height - 640) / 315 * 0.22;
+}
+function adjustOrthoCamera() {
+    var size = getWindowSize();
+    var vertical_size = 16;
+    var horizontal_size = vertical_size * size.width / size.height;
+    camera.orthoTop = vertical_size / 2;
+    camera.orthoBottom = -vertical_size / 2;
+    camera.orthoLeft = -horizontal_size / 2;
+    camera.orthoRight = horizontal_size / 2;
 }
 function onPointerMove(evt) {
     mouseX = evt.clientX;
@@ -660,6 +671,13 @@ function onPointerDown(evt) {
     }
 }
 // TOOLS
+function getWindowSize() {
+    var size = {};
+    var w = window, d = document, e = d.documentElement;
+    size.width = w.innerWidth || e.clientWidth || g.clientWidth;
+    size.height = w.innerHeight || e.clientHeight || g.clientHeight;
+    return size;
+}
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function interpolate(start, end, ratio) {
     var clamp_ratio = clamp(ratio, 0, 1);
